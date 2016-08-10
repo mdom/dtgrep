@@ -81,6 +81,12 @@ func main() {
 
 	if len(flag.Args()) > 0 {
 		for _, filename := range flag.Args() {
+
+			if filename == "-" {
+				files = append(files, os.Stdin)
+				continue
+			}
+
 			file, err := os.Open(filename)
 			if err != nil {
 				log.Fatalln("Cannot open", filename, ":", err)
