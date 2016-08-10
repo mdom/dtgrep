@@ -99,7 +99,7 @@ func main() {
 			case err != nil:
 				log.Fatalln("Error finding dates in ", filename, ":", err)
 			}
-			_, err := file.Seek(offset, os.SEEK_SET)
+			_, err = file.Seek(offset, os.SEEK_SET)
 			if err != nil {
 				log.Fatalln("Can't seek ", filename, ":", err)
 			}
