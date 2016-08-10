@@ -77,7 +77,7 @@ func main() {
 		log.Fatalln("Unknown format:", formatName)
 	}
 
-	var scanners = make([]*bufio.Scanner, 0)
+	var files = make([]*os.File, 0)
 
 	if len(flag.Args()) > 0 {
 		for _, filename := range flag.Args() {
@@ -97,16 +97,15 @@ func main() {
 			if err != nil {
 				log.Fatalln("Can't seek ", filename, ":", err)
 			}
-			scanner := bufio.NewScanner(file)
-			scanners = append(scanners, scanner)
+			files = append(files, file)
 		}
 	} else {
-		scanner := bufio.NewScanner(os.Stdin)
-		scanners = append(scanners, scanner)
+		files = append(files, os.Stdin)
 	}
 
-	for _, scanner := range scanners {
+	for _, file := range files {
 
+		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			line := scanner.Text()
 			dt := getLineTime(line, format)
