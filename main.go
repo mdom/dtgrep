@@ -30,7 +30,7 @@ var formats = []Format{
 
 func parse_date(date string, template string) (time.Time, error) {
 	if date == "now" {
-		return time.Now()
+		return time.Now(), nil
 	}
 	dt, err := time.ParseInLocation(template, date, time.Local)
 	if err != nil {
