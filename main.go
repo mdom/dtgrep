@@ -91,6 +91,8 @@ func main() {
 			if err != nil {
 				log.Fatalln("Cannot open", filename, ":", err)
 			}
+			defer file.Close()
+
 			offset, err := findOffset(file, from, format)
 			switch {
 			case err == io.EOF:
