@@ -20,6 +20,10 @@ type Format struct {
 	template string
 }
 
+type Options struct {
+	from, to time.Time
+}
+
 var formats = []Format{
 	{
 		regexp:   `^[A-Z][a-z]{2} \d{2} \d{2}:\d{2}:\d{2}`,
@@ -65,6 +69,11 @@ func main() {
 		log.Fatalln("Can't parse --to:", err)
 	}
 
+	options := Options{
+		from: from,
+		to:   to,
+	}
+
 	var format Format
 	for _, f := range formats {
 		if f.name == formatName {
@@ -93,7 +102,7 @@ func main() {
 			}
 			defer file.Close()
 
-			offset, err := findOffset(file, from, format)
+			offset, err := findOffset(file, options, format)
 			switch {
 			case err == io.EOF:
 				// daterange not in file, skip
@@ -120,7 +129,7 @@ func main() {
 			if err != nil {
 				log.Fatalln("Aborting. Found line without date:", line)
 			}
-			if dt.Before(to) {
+			if dt.Before(options.to) {
 				fmt.Println(line)
 			} else {
 				break
@@ -136,7 +145,7 @@ func getLineTime(line string, format Format) (time.Time, error) {
 	return dt, err
 }
 
-func findOffset(f *os.File, from time.Time, format Format) (offset int64, err error) {
+func findOffset(f *os.File, options Options, format Format) (offset int64, err error) {
 	// find block size
 	block_size := int64(4096)
 
@@ -160,7 +169,7 @@ func findOffset(f *os.File, from time.Time, format Format) (offset int64, err er
 		if err != nil {
 			log.Fatalln("Aborting. Found line without date:", line)
 		}
-		if dt.Before(from) {
+		if dt.Before(options.from) {
 			min = mid
 		} else {
 			max = mid
@@ -179,7 +188,7 @@ func findOffset(f *os.File, from time.Time, format Format) (offset int64, err er
 		if err != nil {
 			log.Fatalln("Aborting. Found line without date:", line)
 		}
-		if dt.After(from) {
+		if dt.After(options.from) {
 			return offset, nil
 		}
 		offset += int64(len(line) + 1)
