@@ -114,7 +114,7 @@ func main() {
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			line := scanner.Text()
-			dt := getLineTime(line, format)
+			dt, err := getLineTime(line, format)
 			if err != nil {
 				log.Fatalln("Aborting. Found line without date:", line)
 			}
@@ -173,7 +173,7 @@ func findOffset(f *os.File, from time.Time, format Format) (offset int64, err er
 	offset += int64(len(scanner.Text()) + 1)
 	for scanner.Scan() {
 		line := scanner.Text()
-		dt := getLineTime(line, format)
+		dt, err := getLineTime(line, format)
 		if err != nil {
 			log.Fatalln("Aborting. Found line without date:", line)
 		}
