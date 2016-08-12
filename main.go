@@ -54,24 +54,22 @@ func main() {
 
 	var from_arg, to_arg, formatName string
 
+	var options Options
+
 	flag.StringVar(&from_arg, "from", epoch.Format(time.RFC3339), "Print all lines from `DATESPEC` inclusively.")
 	flag.StringVar(&to_arg, "to", "now", "Print all lines until `DATESPEC` exclusively.")
 	flag.StringVar(&formatName, "format", "rsyslog", "Use `Format` to parse file.")
 
 	flag.Parse()
 
-	from, err := parse_date(from_arg, time.RFC3339)
+	var err error
+	options.from, err = parse_date(from_arg, time.RFC3339)
 	if err != nil {
 		log.Fatalln("Can't parse --from:", err)
 	}
-	to, err := parse_date(to_arg, time.RFC3339)
+	options.to, err = parse_date(to_arg, time.RFC3339)
 	if err != nil {
 		log.Fatalln("Can't parse --to:", err)
-	}
-
-	options := Options{
-		from: from,
-		to:   to,
 	}
 
 	var format Format
