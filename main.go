@@ -23,7 +23,7 @@ type Format struct {
 type Options struct {
 	from, to     time.Time
 	skipDateless bool
-	multiline bool
+	multiline    bool
 }
 
 var formats = []Format{
@@ -136,15 +136,16 @@ func main() {
 			}
 			dt, err := getLineTime(line, format)
 
-			if err != nil && options.multiline {
+			switch {
+			case err != nil && options.multiline:
 				fmt.Println(line)
-			} else if err != nil && options.skipDateless {
+			case err != nil && options.skipDateless:
 				continue
-			} else if err != nil {
+			case err != nil:
 				log.Fatalln("Aborting. Found line without date:", line)
-			} else if dt.Before(options.to) {
+			case dt.Before(options.to):
 				fmt.Println(line)
-			} else {
+			default:
 				break
 			}
 		}
