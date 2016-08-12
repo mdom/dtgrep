@@ -21,7 +21,8 @@ type Format struct {
 }
 
 type Options struct {
-	from, to time.Time
+	from, to     time.Time
+	skipDateless bool
 }
 
 var formats = []Format{
@@ -59,6 +60,7 @@ func main() {
 	flag.StringVar(&from_arg, "from", epoch.Format(time.RFC3339), "Print all lines from `DATESPEC` inclusively.")
 	flag.StringVar(&to_arg, "to", "now", "Print all lines until `DATESPEC` exclusively.")
 	flag.StringVar(&formatName, "format", "rsyslog", "Use `Format` to parse file.")
+	flag.BoolVar(&options.skipDateless, "skip-dateless", false, "Ignore all lines without timestamp.")
 
 	flag.Parse()
 
@@ -121,9 +123,19 @@ func main() {
 	for _, file := range files {
 
 		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			line := scanner.Text()
+		for {
+			line, err := nextLine(scanner)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				// what file?
+				log.Fatalln("Error reading file:", err)
+			}
 			dt, err := getLineTime(line, format)
+			if err != nil && options.skipDateless {
+				continue
+			}
 			if err != nil {
 				log.Fatalln("Aborting. Found line without date:", line)
 			}
@@ -177,14 +189,22 @@ func findOffset(f *os.File, options Options, format Format) (offset int64, err e
 			return 0, err
 		}
 
-		line, err := nextLine(scanner)
-		if err != nil {
-			return 0, err
-		}
+		var dt time.Time
 
-		dt, err := getLineTime(line, format)
-		if err != nil {
-			log.Fatalln("Aborting. Found line without date:", line)
+		for {
+			line, err := nextLine(scanner)
+			if err != nil {
+				return 0, err
+			}
+
+			dt, err = getLineTime(line, format)
+			if err != nil && options.skipDateless {
+				continue
+			}
+			if err != nil {
+				log.Fatalln("Aborting. Found line without date:", line)
+			}
+			break
 		}
 
 		if dt.Before(options.from) {
@@ -198,11 +218,23 @@ func findOffset(f *os.File, options Options, format Format) (offset int64, err e
 	offset = min
 	f.Seek(min, os.SEEK_SET)
 	scanner := bufio.NewScanner(f)
-	scanner.Scan() // skip partial line
-	offset += int64(len(scanner.Text()) + 1)
-	for scanner.Scan() {
-		line := scanner.Text()
+
+	line, err := nextLine(scanner) // skip partial line
+	if err != nil {
+		return 0, err
+	}
+	offset += int64(len(line) + 1)
+
+	for {
+		line, err := nextLine(scanner)
+		if err != nil {
+			return 0, err
+		}
 		dt, err := getLineTime(line, format)
+		fmt.Println("skip", options.skipDateless)
+		if err != nil && options.skipDateless {
+			continue
+		}
 		if err != nil {
 			log.Fatalln("Aborting. Found line without date:", line)
 		}
@@ -210,7 +242,6 @@ func findOffset(f *os.File, options Options, format Format) (offset int64, err e
 			return offset, nil
 		}
 		offset += int64(len(line) + 1)
-
 	}
 	return 0, io.EOF
 }
