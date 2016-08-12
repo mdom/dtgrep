@@ -145,6 +145,17 @@ func getLineTime(line string, format Format) (time.Time, error) {
 	return dt, err
 }
 
+func nextLine(s *bufio.Scanner) (string, error) {
+	ret := s.Scan()
+	if !ret && s.Err() == nil {
+		return "", io.EOF
+	}
+	if !ret {
+		return "", s.Err()
+	}
+	return s.Text(), nil
+}
+
 func findOffset(f *os.File, options Options, format Format) (offset int64, err error) {
 	// find block size
 	block_size := int64(4096)
@@ -162,13 +173,22 @@ func findOffset(f *os.File, options Options, format Format) (offset int64, err e
 		mid = (max + min) / 2
 		f.Seek(mid*block_size, os.SEEK_SET)
 		scanner := bufio.NewScanner(f)
-		scanner.Scan() // skip partial line
-		scanner.Scan()
-		line := scanner.Text()
+
+		_, err := nextLine(scanner) // skip partial line
+		if err != nil {
+			return 0, err
+		}
+
+		line, err := nextLine(scanner)
+		if err != nil {
+			return 0, err
+		}
+
 		dt, err := getLineTime(line, format)
 		if err != nil {
 			log.Fatalln("Aborting. Found line without date:", line)
 		}
+
 		if dt.Before(options.from) {
 			min = mid
 		} else {
