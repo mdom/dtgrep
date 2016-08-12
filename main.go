@@ -23,6 +23,7 @@ type Format struct {
 type Options struct {
 	from, to     time.Time
 	skipDateless bool
+	multiline bool
 }
 
 var formats = []Format{
@@ -61,6 +62,7 @@ func main() {
 	flag.StringVar(&to_arg, "to", "now", "Print all lines until `DATESPEC` exclusively.")
 	flag.StringVar(&formatName, "format", "rsyslog", "Use `Format` to parse file.")
 	flag.BoolVar(&options.skipDateless, "skip-dateless", false, "Ignore all lines without timestamp.")
+	flag.BoolVar(&options.multiline, "multiline", false, "Print all lines between the start and end line even if they are not timestamped.")
 
 	flag.Parse()
 
@@ -133,13 +135,14 @@ func main() {
 				log.Fatalln("Error reading file:", err)
 			}
 			dt, err := getLineTime(line, format)
-			if err != nil && options.skipDateless {
+
+			if err != nil && options.multiline {
+				fmt.Println(line)
+			} else if err != nil && options.skipDateless {
 				continue
-			}
-			if err != nil {
+			} else if err != nil {
 				log.Fatalln("Aborting. Found line without date:", line)
-			}
-			if dt.Before(options.to) {
+			} else if dt.Before(options.to) {
 				fmt.Println(line)
 			} else {
 				break
@@ -179,6 +182,8 @@ func findOffset(f *os.File, options Options, format Format) (offset int64, err e
 	max := size / block_size
 	var mid int64
 
+	var ignore_errors = options.skipDateless || options.multiline
+
 	for max-min > 1 {
 		mid = (max + min) / 2
 		f.Seek(mid*block_size, os.SEEK_SET)
@@ -198,7 +203,7 @@ func findOffset(f *os.File, options Options, format Format) (offset int64, err e
 			}
 
 			dt, err = getLineTime(line, format)
-			if err != nil && options.skipDateless {
+			if err != nil && ignore_errors {
 				continue
 			}
 			if err != nil {
@@ -231,8 +236,7 @@ func findOffset(f *os.File, options Options, format Format) (offset int64, err e
 			return 0, err
 		}
 		dt, err := getLineTime(line, format)
-		fmt.Println("skip", options.skipDateless)
-		if err != nil && options.skipDateless {
+		if err != nil && ignore_errors {
 			continue
 		}
 		if err != nil {
