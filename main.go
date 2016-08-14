@@ -28,9 +28,9 @@ type Options struct {
 
 var formats = []Format{
 	{
-		regexp:   `^[A-Z][a-z]{2} \d{2} \d{2}:\d{2}:\d{2}`,
+		regexp:   `^[A-Z][a-z]{2}  ?\d\d? \d{2}:\d{2}:\d{2}`,
 		name:     "rsyslog",
-		template: "Jan 02 15:04:05",
+		template: "Jan _2 15:04:05",
 	},
 }
 
