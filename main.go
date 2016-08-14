@@ -2,11 +2,13 @@ package main
 
 import (
 	"bufio"
+	"compress/gzip"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"path"
 	"regexp"
 	"time"
 )
@@ -88,7 +90,7 @@ func main() {
 		log.Fatalln("Unknown format:", formatName)
 	}
 
-	var files = make([]*os.File, 0)
+	var files = make([]io.Reader, 0)
 
 	if len(flag.Args()) > 0 {
 		for _, filename := range flag.Args() {
@@ -104,19 +106,30 @@ func main() {
 			}
 			defer file.Close()
 
-			offset, err := findOffset(file, options, format)
-			switch {
-			case err == io.EOF:
-				// daterange not in file, skip
-				continue
-			case err != nil:
-				log.Fatalln("Error finding dates in ", filename, ":", err)
+			ext := path.Ext(filename)
+			if ext == ".gz" || ext == ".z" {
+				reader, err := gzip.NewReader(file)
+				if err != nil {
+					log.Fatalln("Cannot open", filename, ":", err)
+				}
+				files = append(files, reader)
+				defer reader.Close()
+			} else {
+
+				offset, err := findOffset(file, options, format)
+				switch {
+				case err == io.EOF:
+					// daterange not in file, skip
+					continue
+				case err != nil:
+					log.Fatalln("Error finding dates in ", filename, ":", err)
+				}
+				_, err = file.Seek(offset, os.SEEK_SET)
+				if err != nil {
+					log.Fatalln("Can't seek ", filename, ":", err)
+				}
+				files = append(files, file)
 			}
-			_, err = file.Seek(offset, os.SEEK_SET)
-			if err != nil {
-				log.Fatalln("Can't seek ", filename, ":", err)
-			}
-			files = append(files, file)
 		}
 	} else {
 		files = append(files, os.Stdin)
