@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"compress/bzip2"
 	"compress/gzip"
 	"flag"
 	"fmt"
@@ -114,8 +115,10 @@ func main() {
 				}
 				files = append(files, reader)
 				defer reader.Close()
+			} else if ext == ".bz2" || ext == ".bz" {
+				reader := bzip2.NewReader(file)
+				files = append(files, reader)
 			} else {
-
 				offset, err := findOffset(file, options, format)
 				switch {
 				case err == io.EOF:
