@@ -12,6 +12,7 @@ import (
 	"path"
 	"regexp"
 	"time"
+	"sort"
 )
 
 var now = time.Now()
@@ -27,6 +28,36 @@ type Options struct {
 	from, to     time.Time
 	skipDateless bool
 	multiline    bool
+}
+
+type Iterator struct {
+	filename string
+	reader   io.Reader
+	*bufio.Scanner
+	Line string
+	Time time.Time
+	Err  error
+}
+
+type Iterators []*Iterator
+
+func (it Iterators) Len() int           { return len(it) }
+func (it Iterators) Swap(i, j int)      { it[i], it[j] = it[j], it[i] }
+func (it Iterators) Less(i, j int) bool { return it[i].Time.Before(it[j].Time) }
+
+func inTimeRange(s *Iterator, from, to time.Time) bool {
+	dt := s.Time
+	return (dt.Equal(from) || dt.After(from)) && dt.Before(to)
+}
+
+func filter(s Iterators, from, to time.Time) Iterators {
+	var p Iterators
+	for _, v := range s {
+		if v.Err == nil && inTimeRange(v, from, to) {
+			p = append(p, v)
+		}
+	}
+	return p
 }
 
 var formats = []Format{
@@ -91,13 +122,14 @@ func main() {
 		log.Fatalln("Unknown format:", formatName)
 	}
 
-	var files = make([]io.Reader, 0)
+	var iterators = make(Iterators, 0)
 
 	if len(flag.Args()) > 0 {
 		for _, filename := range flag.Args() {
 
 			if filename == "-" {
-				files = append(files, os.Stdin)
+				i := &Iterator{filename: filename, reader: os.Stdin, Scanner: bufio.NewScanner(os.Stdin)}
+				iterators = append(iterators, i)
 				continue
 			}
 
@@ -107,19 +139,22 @@ func main() {
 			}
 			defer file.Close()
 
+			// mimeType support?
 			ext := path.Ext(filename)
 			if ext == ".gz" || ext == ".z" {
-				reader, err := gzip.NewReader(file)
+				r, err := gzip.NewReader(file)
+				defer r.Close()
 				if err != nil {
 					log.Fatalln("Cannot open", filename, ":", err)
 				}
-				files = append(files, reader)
-				defer reader.Close()
+				i := &Iterator{filename: filename, reader: r, Scanner: bufio.NewScanner(r)}
+				iterators = append(iterators, i)
 			} else if ext == ".bz2" || ext == ".bz" {
-				reader := bzip2.NewReader(file)
-				files = append(files, reader)
+				r := bzip2.NewReader(file)
+				i := &Iterator{filename: filename, reader: r, Scanner: bufio.NewScanner(r)}
+				iterators = append(iterators, i)
 			} else {
-				offset, err := findOffset(file, options, format)
+				scanner, err := findStartSeekable(file, options, format)
 				switch {
 				case err == io.EOF:
 					// daterange not in file, skip
@@ -127,43 +162,64 @@ func main() {
 				case err != nil:
 					log.Fatalln("Error finding dates in ", filename, ":", err)
 				}
-				_, err = file.Seek(offset, os.SEEK_SET)
-				if err != nil {
-					log.Fatalln("Can't seek ", filename, ":", err)
-				}
-				files = append(files, file)
+				i := &Iterator{filename: filename, reader: file, Scanner: scanner}
+				iterators = append(iterators, i)
 			}
 		}
 	} else {
-		files = append(files, os.Stdin)
+		i := &Iterator{filename: "-", reader: os.Stdin, Scanner: bufio.NewScanner(os.Stdin)}
+		iterators = append(iterators, i)
 	}
 
-	for _, file := range files {
+	var ignoreError = options.skipDateless || options.multiline
+	for _, i := range iterators {
+		i.Scan(options.from, options.to, ignoreError, format)
+	}
 
-		scanner := bufio.NewScanner(file)
-		for {
-			line, err := nextLine(scanner)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				// what file?
-				log.Fatalln("Error reading file:", err)
-			}
-			dt, err := getLineTime(line, format)
+	for {
 
-			switch {
-			case err != nil && options.multiline:
-				fmt.Println(line)
-			case err != nil && options.skipDateless:
-				continue
-			case err != nil:
-				log.Fatalln("Aborting. Found line without date:", line)
-			case dt.Before(options.to):
-				fmt.Println(line)
-			default:
-				break
+		iterators = filter(iterators, options.from, options.to)
+		sort.Sort(iterators)
+
+		if len(iterators) > 0 {
+			var until time.Time
+			if len(iterators) > 1 {
+				until = iterators[1].Time
+			} else {
+				until = options.to
 			}
+			i := iterators[0]
+			fmt.Println(i.Line)
+			i.Print(until, options, format)
+		} else {
+			break
+		}
+	}
+}
+
+func (i *Iterator) Print(to time.Time, options Options, format Format) {
+	for {
+		i.Line, i.Err = readline(i.Scanner)
+		if i.Err == io.EOF {
+			return
+		}
+		if i.Err != nil {
+			// what file?
+			log.Fatalln("Error reading file:", i.Err)
+		}
+		i.Time, i.Err = getLineTime(i.Line, format)
+
+		switch {
+		case i.Err != nil && options.multiline:
+			fmt.Println(i.Line)
+		case i.Err != nil && options.skipDateless:
+			continue
+		case i.Err != nil:
+			log.Fatalln("Aborting. Found line without date:", i.Line)
+		case i.Time.Before(to):
+			fmt.Println(i.Line)
+		default:
+			return
 		}
 	}
 }
@@ -175,7 +231,7 @@ func getLineTime(line string, format Format) (time.Time, error) {
 	return dt, err
 }
 
-func nextLine(s *bufio.Scanner) (string, error) {
+func readline(s *bufio.Scanner) (string, error) {
 	ret := s.Scan()
 	if !ret && s.Err() == nil {
 		return "", io.EOF
@@ -186,13 +242,37 @@ func nextLine(s *bufio.Scanner) (string, error) {
 	return s.Text(), nil
 }
 
-func findOffset(f *os.File, options Options, format Format) (offset int64, err error) {
+func (i *Iterator) Scan(from, to time.Time, ignoreError bool, format Format) {
+	for {
+		i.Line, i.Err = readline(i.Scanner)
+		if i.Err != nil {
+			break
+		}
+		i.Time, i.Err = getLineTime(i.Line, format)
+		if i.Err != nil && ignoreError {
+			continue
+		}
+		if i.Err != nil {
+			log.Fatalln("Aborting. Found line without date:", i.Line)
+		}
+		if i.Time.After(to) {
+			i.Err = io.EOF
+			break
+		}
+		if i.Time.Equal(from) || i.Time.After(from) {
+			break
+		}
+	}
+}
+
+func findStartSeekable(f *os.File, options Options, format Format) (*bufio.Scanner, error) {
+
 	// find block size
 	block_size := int64(4096)
 
 	file_info, err := f.Stat()
 	if err != nil {
-		return 0, err
+		return &bufio.Scanner{}, err
 	}
 	size := file_info.Size()
 	min := int64(0)
@@ -206,17 +286,17 @@ func findOffset(f *os.File, options Options, format Format) (offset int64, err e
 		f.Seek(mid*block_size, os.SEEK_SET)
 		scanner := bufio.NewScanner(f)
 
-		_, err := nextLine(scanner) // skip partial line
+		_, err := readline(scanner) // skip partial line
 		if err != nil {
-			return 0, err
+			return scanner, err
 		}
 
 		var dt time.Time
 
 		for {
-			line, err := nextLine(scanner)
+			line, err := readline(scanner)
 			if err != nil {
-				return 0, err
+				return scanner, err
 			}
 
 			dt, err = getLineTime(line, format)
@@ -227,6 +307,7 @@ func findOffset(f *os.File, options Options, format Format) (offset int64, err e
 				log.Fatalln("Aborting. Found line without date:", line)
 			}
 			break
+			// optimization: while searching next line we entered next block
 		}
 
 		if dt.Before(options.from) {
@@ -237,32 +318,17 @@ func findOffset(f *os.File, options Options, format Format) (offset int64, err e
 	}
 
 	min = min * block_size
-	offset = min
-	f.Seek(min, os.SEEK_SET)
-	scanner := bufio.NewScanner(f)
-
-	line, err := nextLine(scanner) // skip partial line
+	_, err = f.Seek(min, os.SEEK_SET)
 	if err != nil {
-		return 0, err
+		return &bufio.Scanner{}, err
 	}
-	offset += int64(len(line) + 1)
+	scanner := bufio.NewScanner(f)
+	if min > 0 {
+		_, err := readline(scanner) // skip partial line
+		if err != nil {
+			return scanner, err
+		}
+	}
 
-	for {
-		line, err := nextLine(scanner)
-		if err != nil {
-			return 0, err
-		}
-		dt, err := getLineTime(line, format)
-		if err != nil && ignore_errors {
-			continue
-		}
-		if err != nil {
-			log.Fatalln("Aborting. Found line without date:", line)
-		}
-		if dt.After(options.from) {
-			return offset, nil
-		}
-		offset += int64(len(line) + 1)
-	}
-	return 0, io.EOF
+	return scanner, nil
 }
