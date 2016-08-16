@@ -66,6 +66,11 @@ var formats = []Format{
 		name:     "rsyslog",
 		template: "Jan _2 15:04:05",
 	},
+	{
+		regexp:   `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d)?(Z|[+-]\d\d:\d\d)`,
+		name:     "rfc3339",
+		template: time.RFC3339,
+	},
 }
 
 func parse_date(date string, template string) (time.Time, error) {
