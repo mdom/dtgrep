@@ -97,9 +97,14 @@ func main() {
 
 	var options Options
 
+	default_format := "rsyslog"
+	if os.Getenv("GO_DATEGREP_FORMAT") != "" {
+		default_format = os.Getenv("GO_DATEGREP_FORMAT")
+	}
+
 	flag.StringVar(&from_arg, "from", epoch.Format(time.RFC3339), "Print all lines from `DATESPEC` inclusively.")
 	flag.StringVar(&to_arg, "to", "now", "Print all lines until `DATESPEC` exclusively.")
-	flag.StringVar(&formatName, "format", "rsyslog", "Use `Format` to parse file.")
+	flag.StringVar(&formatName, "format", default_format, "Use `Format` to parse file.")
 	flag.BoolVar(&options.skipDateless, "skip-dateless", false, "Ignore all lines without timestamp.")
 	flag.BoolVar(&options.multiline, "multiline", false, "Print all lines between the start and end line even if they are not timestamped.")
 
