@@ -11,12 +11,13 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"time"
 	"sort"
+	"time"
 )
 
 var now = time.Now()
 var epoch time.Time
+var loc = time.Local
 
 type Format struct {
 	regexp   string
@@ -93,7 +94,7 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix("")
 
-	var from_arg, to_arg, formatName string
+	var from_arg, to_arg, formatName, location string
 
 	var options Options
 
@@ -107,10 +108,17 @@ func main() {
 	flag.StringVar(&formatName, "format", default_format, "Use `Format` to parse file.")
 	flag.BoolVar(&options.skipDateless, "skip-dateless", false, "Ignore all lines without timestamp.")
 	flag.BoolVar(&options.multiline, "multiline", false, "Print all lines between the start and end line even if they are not timestamped.")
+	flag.StringVar(&location, "location", time.Local.String(), "Use location in the absence of any timezone information.")
 
 	flag.Parse()
 
 	var err error
+
+	loc, err = time.LoadLocation(location)
+	if err != nil {
+		log.Fatalln("Can't load location:", err)
+	}
+
 	options.from, err = parse_date(from_arg, time.RFC3339)
 	if err != nil {
 		log.Fatalln("Can't parse --from:", err)
