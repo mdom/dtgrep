@@ -73,7 +73,7 @@ func parse_date(date string, template string) (time.Time, error) {
 	return dt, nil
 }
 
-func fill_date (dt time.Time) time.Time {
+func fill_date(dt time.Time) time.Time {
 	now := time.Now()
 	if dt.Year() == 0 {
 		dt = dt.AddDate(now.Year(), 0, 0)
@@ -123,18 +123,18 @@ func main() {
 	var format retime.Format
 	for name, template := range formats {
 		if name == formatName {
-			format,err = retime.New(template, loc)
+			format, err = retime.New(template, loc)
 			if err != nil {
-				log.Fatalln("Can't create format:",err)
+				log.Fatalln("Can't create format:", err)
 			}
 			break
 		}
 	}
 
 	if (format == retime.Format{}) {
-		format,err = retime.New(formatName, loc)
-		if  err != nil {
-			log.Fatalln("Can't create format:",err)
+		format, err = retime.New(formatName, loc)
+		if err != nil {
+			log.Fatalln("Can't create format:", err)
 		}
 	}
 
