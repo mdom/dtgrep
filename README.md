@@ -29,11 +29,11 @@ The only parameter go-dategrep really needs is _format_ to tell it how to
 reckognize a timestamp. In this case go-dategrep matches all lines from epoch to
 the time go-dategrep started.
 
-    go-dategrep -F "Jan _2 15:04:05" syslog
+    go-dategrep --format "Jan _2 15:04:05" syslog
 
 There are also some already predefined formats you can use:
 
-    go-dategrep -F apache access.log
+    go-dategrep --format apache access.log
 
 You can specify which timerange to print:
 
