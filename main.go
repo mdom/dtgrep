@@ -6,11 +6,11 @@ import (
 	"compress/gzip"
 	"flag"
 	"fmt"
+	"github.com/mdom/go-dategrep/retime"
 	"io"
 	"log"
 	"os"
 	"path"
-	"regexp"
 	"sort"
 	"time"
 )
@@ -18,12 +18,6 @@ import (
 var now = time.Now()
 var epoch time.Time
 var loc = time.Local
-
-type Format struct {
-	regexp   string
-	name     string
-	template string
-}
 
 type Options struct {
 	from, to     time.Time
@@ -61,17 +55,9 @@ func filter(s Iterators, from, to time.Time) Iterators {
 	return p
 }
 
-var formats = []Format{
-	{
-		regexp:   `^[A-Z][a-z]{2}  ?\d\d? \d{2}:\d{2}:\d{2}`,
-		name:     "rsyslog",
-		template: "Jan _2 15:04:05",
-	},
-	{
-		regexp:   `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d)?(Z|[+-]\d\d:\d\d)`,
-		name:     "rfc3339",
-		template: time.RFC3339,
-	},
+var formats = map[string]string{
+	"rsyslog": "Jan _2 15:04:05",
+	"rfc3339": time.RFC3339,
 }
 
 func parse_date(date string, template string) (time.Time, error) {
@@ -82,11 +68,16 @@ func parse_date(date string, template string) (time.Time, error) {
 	if err != nil {
 		return dt, err
 	}
+	dt = fill_date(dt)
+	return dt, nil
+}
+
+func fill_date (dt time.Time) time.Time {
 	now := time.Now()
 	if dt.Year() == 0 {
 		dt = dt.AddDate(now.Year(), 0, 0)
 	}
-	return dt, nil
+	return dt
 }
 
 func main() {
@@ -128,15 +119,15 @@ func main() {
 		log.Fatalln("Can't parse --to:", err)
 	}
 
-	var format Format
-	for _, f := range formats {
-		if f.name == formatName {
-			format = f
+	var format retime.Format
+	for name, template := range formats {
+		if name == formatName {
+			format = retime.New(template, loc)
 			break
 		}
 	}
 
-	if (format == Format{}) {
+	if (format == retime.Format{}) {
 		log.Fatalln("Unknown format:", formatName)
 	}
 
@@ -215,7 +206,7 @@ func main() {
 	}
 }
 
-func (i *Iterator) Print(to time.Time, options Options, format Format) {
+func (i *Iterator) Print(to time.Time, options Options, format retime.Format) {
 	for {
 		i.Line, i.Err = readline(i.Scanner)
 		if i.Err == io.EOF {
@@ -225,7 +216,8 @@ func (i *Iterator) Print(to time.Time, options Options, format Format) {
 			// what file?
 			log.Fatalln("Error reading file:", i.Err)
 		}
-		i.Time, i.Err = getLineTime(i.Line, format)
+		i.Time, i.Err = format.Extract(i.Line)
+		i.Time = fill_date(i.Time)
 
 		switch {
 		case i.Err != nil && options.multiline:
@@ -242,13 +234,6 @@ func (i *Iterator) Print(to time.Time, options Options, format Format) {
 	}
 }
 
-func getLineTime(line string, format Format) (time.Time, error) {
-	re := regexp.MustCompile(format.regexp)
-	time_string := re.FindString(line)
-	dt, err := parse_date(time_string, format.template)
-	return dt, err
-}
-
 func readline(s *bufio.Scanner) (string, error) {
 	ret := s.Scan()
 	if !ret && s.Err() == nil {
@@ -260,13 +245,14 @@ func readline(s *bufio.Scanner) (string, error) {
 	return s.Text(), nil
 }
 
-func (i *Iterator) Scan(from, to time.Time, ignoreError bool, format Format) {
+func (i *Iterator) Scan(from, to time.Time, ignoreError bool, format retime.Format) {
 	for {
 		i.Line, i.Err = readline(i.Scanner)
 		if i.Err != nil {
 			break
 		}
-		i.Time, i.Err = getLineTime(i.Line, format)
+		i.Time, i.Err = format.Extract(i.Line)
+		i.Time = fill_date(i.Time)
 		if i.Err != nil && ignoreError {
 			continue
 		}
@@ -283,7 +269,7 @@ func (i *Iterator) Scan(from, to time.Time, ignoreError bool, format Format) {
 	}
 }
 
-func findStartSeekable(f *os.File, options Options, format Format) (*bufio.Scanner, error) {
+func findStartSeekable(f *os.File, options Options, format retime.Format) (*bufio.Scanner, error) {
 
 	// find block size
 	block_size := int64(4096)
@@ -317,7 +303,8 @@ func findStartSeekable(f *os.File, options Options, format Format) (*bufio.Scann
 				return scanner, err
 			}
 
-			dt, err = getLineTime(line, format)
+			dt, err = format.Extract(line)
+			dt = fill_date(dt)
 			if err != nil && ignore_errors {
 				continue
 			}
