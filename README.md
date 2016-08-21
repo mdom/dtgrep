@@ -14,12 +14,14 @@ match entries spanning over a hour change?
 
 go-dategrep hopes to solve this problem once and for all.
 
-If go-dategrep works on a normal file, it can do a binary search to find the first
-and last line to print pretty efficiently. go-dategrep can also read from stdin
-and compressed files, but as it can't do any seeking in those files, we have to
-parse every line until we find the first falling in our date range. But at
-least we don't have to wait to reach end of file. As soon as we find the
-first date not in the range, go-dategrep terminates.
+If go-dategrep works on a normal file, it can do a binary search to
+find the first and last line. go-dategrep can also read from stdin
+and compressed files, but as it can't do any seeking in those files,
+we have to parse every line until we find the first falling in our date
+range. But at least we don't have to wait to reach end of file. As soon
+as we find the first date not in the range, go-dategrep terminates.
+
+The lines are merged and will not be printed in argument order.
 
 # EXAMPLES
 
