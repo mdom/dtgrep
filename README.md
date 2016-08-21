@@ -76,6 +76,16 @@ stopping you to just call go-dategrep directly.
 
   This parameter defaults to _rsyslog_.
 
+* --location LOCATION
+
+  If a date has no explicit timezone, interpret it as in the given
+  location. LOCATION must be a valid location from the IANA Time Zone
+  database, such as "America/New\_York".
+
+  If the name is "" or "UTC, interpret dates as UTC.
+
+  This parameter defaults to the system's local time zone.
+
 * --help
 
   Shows a short help message
