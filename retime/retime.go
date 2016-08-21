@@ -12,12 +12,17 @@ type Format struct {
 	loc  *time.Location
 }
 
-func New(layout string, loc *time.Location) Format {
-	return Format{
-		regexp:   compileToRegexp(layout),
+func New(layout string, loc *time.Location) (Format, error) {
+	format := Format{
 		layout: layout,
-		loc:  loc,
+		loc: loc,
 	}
+	regexp, err := compileToRegexp(layout)
+	if err != nil {
+		return format, err
+	}
+	format.regexp = regexp
+	return format, nil
 }
 
 func (f *Format) Extract(s string) (time.Time, error) {
@@ -29,7 +34,7 @@ func prefixAt(s string, index int, prefix string) bool {
 	return len(s) >= index+len(prefix) && s[index:index+len(prefix)] == prefix
 }
 
-func compileToRegexp(layout string) *regexp.Regexp {
+func compileToRegexp(layout string) (*regexp.Regexp, error) {
 	var buffer bytes.Buffer
 
 	l := len(layout)
@@ -130,5 +135,5 @@ func compileToRegexp(layout string) *regexp.Regexp {
 			i++
 		}
 	}
-	return regexp.MustCompile(buffer.String())
+	return regexp.Compile(buffer.String())
 }

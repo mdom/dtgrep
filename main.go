@@ -122,13 +122,19 @@ func main() {
 	var format retime.Format
 	for name, template := range formats {
 		if name == formatName {
-			format = retime.New(template, loc)
+			format,err = retime.New(template, loc)
+			if err != nil {
+				log.Fatalln("Can't create format:",err)
+			}
 			break
 		}
 	}
 
 	if (format == retime.Format{}) {
-		log.Fatalln("Unknown format:", formatName)
+		format,err = retime.New(formatName, loc)
+		if  err != nil {
+			log.Fatalln("Can't create format:",err)
+		}
 	}
 
 	var iterators = make(Iterators, 0)
