@@ -76,6 +76,14 @@ stopping you to just call go-dategrep directly.
 
   This parameter defaults to _rsyslog_.
 
+* --multiline
+
+  Print lines without timestamp between matching lines.
+
+* --skip-dateless
+
+  Ignore lines without timestamp.
+
 * --location LOCATION
 
   If a date has no explicit timezone, interpret it as in the given
