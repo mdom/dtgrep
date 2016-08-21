@@ -76,6 +76,9 @@ func parse_date(date string, template string) (time.Time, error) {
 func fillDate(dt time.Time, now time.Time) time.Time {
 	if dt.Year() == 0 {
 		dt = dt.AddDate(now.Year(), 0, 0)
+		if dt.After(now) {
+			dt = dt.AddDate(-1, 0, 0)
+		}
 	}
 	return dt
 }
