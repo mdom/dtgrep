@@ -69,12 +69,11 @@ func parse_date(date string, template string) (time.Time, error) {
 	if err != nil {
 		return dt, err
 	}
-	dt = fill_date(dt)
+	dt = fillDate(dt, time.Now())
 	return dt, nil
 }
 
-func fill_date(dt time.Time) time.Time {
-	now := time.Now()
+func fillDate(dt time.Time, now time.Time) time.Time {
 	if dt.Year() == 0 {
 		dt = dt.AddDate(now.Year(), 0, 0)
 	}
@@ -224,7 +223,7 @@ func (i *Iterator) Print(to time.Time, options Options, format retime.Format) {
 			log.Fatalln("Error reading file:", i.Err)
 		}
 		i.Time, i.Err = format.Extract(i.Line)
-		i.Time = fill_date(i.Time)
+		i.Time = fillDate(i.Time, time.Now())
 
 		switch {
 		case i.Err != nil && options.multiline:
@@ -259,7 +258,7 @@ func (i *Iterator) Scan(from, to time.Time, ignoreError bool, format retime.Form
 			break
 		}
 		i.Time, i.Err = format.Extract(i.Line)
-		i.Time = fill_date(i.Time)
+		i.Time = fillDate(i.Time, time.Now())
 		if i.Err != nil && ignoreError {
 			continue
 		}
@@ -311,7 +310,7 @@ func findStartSeekable(f *os.File, options Options, format retime.Format) (*bufi
 			}
 
 			dt, err = format.Extract(line)
-			dt = fill_date(dt)
+			dt = fillDate(dt, time.Now())
 			if err != nil && ignore_errors {
 				continue
 			}
