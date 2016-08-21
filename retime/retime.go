@@ -20,7 +20,7 @@ func New(layout string) *Format {
 
 func (f *Format) Extract(s string, loc *time.Location) (time.Time, error) {
 	match := f.regexp.FindString(s)
-	return time.ParseInLocation(match, f.layout, loc)
+	return time.ParseInLocation(f.layout, match, loc)
 }
 
 func prefixAt(s string, index int, prefix string) bool {
