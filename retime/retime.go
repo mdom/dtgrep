@@ -9,18 +9,20 @@ import (
 type Format struct {
 	regexp *regexp.Regexp
 	layout string
+	loc  *time.Location
 }
 
-func New(layout string) *Format {
-	return &Format{
+func New(layout string, loc *time.Location) Format {
+	return Format{
 		regexp:   compileToRegexp(layout),
 		layout: layout,
+		loc:  loc,
 	}
 }
 
-func (f *Format) Extract(s string, loc *time.Location) (time.Time, error) {
+func (f *Format) Extract(s string) (time.Time, error) {
 	match := f.regexp.FindString(s)
-	return time.ParseInLocation(f.layout, match, loc)
+	return time.ParseInLocation(f.layout, match, f.loc)
 }
 
 func prefixAt(s string, index int, prefix string) bool {
