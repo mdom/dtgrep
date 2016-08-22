@@ -73,7 +73,7 @@ stopping you to just call go-dategrep directly.
   Additionally, go-dategrep supports named formats:
 
   * rsyslog "Jan \_2 15:04:05"
-  * apache "02/Jan/2006:15:04:05"
+  * apache "02/Jan/2006:15:04:05 -0700"
   * iso3339 "2006-01-02T15:04:05Z07:00"
 
   This parameter defaults to _rsyslog_.

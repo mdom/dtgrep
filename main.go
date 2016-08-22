@@ -58,7 +58,7 @@ func filter(s Iterators, from, to time.Time) Iterators {
 var formats = map[string]string{
 	"rsyslog": "Jan _2 15:04:05",
 	"rfc3339": time.RFC3339,
-	"apache":  "02/Jan/2006:15:04:05",
+	"apache":  "02/Jan/2006:15:04:05 -0700",
 }
 
 func parse_date(date string, template string) (time.Time, error) {
