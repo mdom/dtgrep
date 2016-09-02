@@ -19,6 +19,10 @@ var now = time.Now()
 var epoch time.Time
 var loc = time.Local
 
+var Version = ""
+var CommitHash = ""
+var BuildDate = ""
+
 type Options struct {
 	from, to     time.Time
 	skipDateless bool
@@ -104,7 +108,16 @@ func main() {
 	flag.BoolVar(&options.multiline, "multiline", false, "Print all lines between the start and end line even if they are not timestamped.")
 	flag.StringVar(&location, "location", time.Local.String(), "Use location in the absence of any timezone information.")
 
+	var displayVersion bool
+	flag.BoolVar(&displayVersion, "version", false, "Display version")
+
 	flag.Parse()
+
+	if displayVersion {
+		log.Printf("version: %s\ncommit: %s\nbuild date: %s\n",
+			Version, CommitHash, BuildDate)
+		return
+	}
 
 	var err error
 
