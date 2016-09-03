@@ -65,7 +65,7 @@ var formats = map[string]string{
 	"apache":  "02/Jan/2006:15:04:05 -0700",
 }
 
-func parse_date(date string, template string) (time.Time, error) {
+func parseDate(date string, template string) (time.Time, error) {
 	if date == "now" {
 		return time.Now(), nil
 	}
@@ -92,18 +92,18 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix("")
 
-	var from_arg, to_arg, formatName, location string
+	var fromArg, toArg, formatName, location string
 
 	var options Options
 
-	default_format := "rsyslog"
+	defaultFormat := "rsyslog"
 	if os.Getenv("GO_DATEGREP_FORMAT") != "" {
-		default_format = os.Getenv("GO_DATEGREP_FORMAT")
+		defaultFormat = os.Getenv("GO_DATEGREP_FORMAT")
 	}
 
-	flag.StringVar(&from_arg, "from", epoch.Format(time.RFC3339), "Print all lines from `DATESPEC` inclusively.")
-	flag.StringVar(&to_arg, "to", "now", "Print all lines until `DATESPEC` exclusively.")
-	flag.StringVar(&formatName, "format", default_format, "Use `Format` to parse file.")
+	flag.StringVar(&fromArg, "from", epoch.Format(time.RFC3339), "Print all lines from `DATESPEC` inclusively.")
+	flag.StringVar(&toArg, "to", "now", "Print all lines until `DATESPEC` exclusively.")
+	flag.StringVar(&formatName, "format", defaultFormat, "Use `Format` to parse file.")
 	flag.BoolVar(&options.skipDateless, "skip-dateless", false, "Ignore all lines without timestamp.")
 	flag.BoolVar(&options.multiline, "multiline", false, "Print all lines between the start and end line even if they are not timestamped.")
 	flag.StringVar(&location, "location", time.Local.String(), "Use location in the absence of any timezone information.")
@@ -126,11 +126,11 @@ func main() {
 		log.Fatalln("Can't load location:", err)
 	}
 
-	options.from, err = parse_date(from_arg, time.RFC3339)
+	options.from, err = parseDate(fromArg, time.RFC3339)
 	if err != nil {
 		log.Fatalln("Can't parse --from:", err)
 	}
-	options.to, err = parse_date(to_arg, time.RFC3339)
+	options.to, err = parseDate(toArg, time.RFC3339)
 	if err != nil {
 		log.Fatalln("Can't parse --to:", err)
 	}
@@ -294,22 +294,22 @@ func (i *Iterator) Scan(from, to time.Time, ignoreError bool, format retime.Form
 func findStartSeekable(f *os.File, options Options, format retime.Format) (*bufio.Scanner, error) {
 
 	// find block size
-	block_size := int64(4096)
+	blockSize := int64(4096)
 
-	file_info, err := f.Stat()
+	fileInfo, err := f.Stat()
 	if err != nil {
 		return &bufio.Scanner{}, err
 	}
-	size := file_info.Size()
+	size := fileInfo.Size()
 	min := int64(0)
-	max := size / block_size
+	max := size / blockSize
 	var mid int64
 
-	var ignore_errors = options.skipDateless || options.multiline
+	var ignoreErrors = options.skipDateless || options.multiline
 
 	for max-min > 1 {
 		mid = (max + min) / 2
-		f.Seek(mid*block_size, os.SEEK_SET)
+		f.Seek(mid*blockSize, os.SEEK_SET)
 		scanner := bufio.NewScanner(f)
 
 		_, err := readline(scanner) // skip partial line
@@ -327,7 +327,7 @@ func findStartSeekable(f *os.File, options Options, format retime.Format) (*bufi
 
 			dt, err = format.Extract(line)
 			dt = fillDate(dt, time.Now())
-			if err != nil && ignore_errors {
+			if err != nil && ignoreErrors {
 				continue
 			}
 			if err != nil {
@@ -344,7 +344,7 @@ func findStartSeekable(f *os.File, options Options, format retime.Format) (*bufi
 		}
 	}
 
-	min = min * block_size
+	min = min * blockSize
 	_, err = f.Seek(min, os.SEEK_SET)
 	if err != nil {
 		return &bufio.Scanner{}, err
