@@ -6,7 +6,7 @@ import (
 	"compress/gzip"
 	"flag"
 	"fmt"
-	"github.com/mdom/go-dategrep/retime"
+	"github.com/mdom/dtgrep/retime"
 	"io"
 	"log"
 	"os"
