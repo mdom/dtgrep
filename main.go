@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"time"
 )
@@ -36,6 +37,11 @@ type Iterator struct {
 	Line string
 	Time time.Time
 	Err  error
+}
+
+type Formats struct {
+	template string
+	complete func(date time.Time, now time.Time) time.Time
 }
 
 type Iterators []*Iterator
@@ -65,19 +71,75 @@ var formats = map[string]string{
 	"apache":  "02/Jan/2006:15:04:05 -0700",
 }
 
-func parseDate(date string, template string) (time.Time, error) {
-	if date == "now" {
-		return time.Now(), nil
+func parseDate(dateSpec string, template string) (time.Time, error) {
+
+	dateSubstr := dateSpec
+
+	results := regexp.MustCompile(`(add|round|truncate)\s+(\S+)`).FindAllStringSubmatchIndex(dateSpec, -1)
+	if results != nil {
+		idx := results[0][0]
+		if idx == 0 {
+			dateSubstr = ""
+		} else {
+			dateSubstr = dateSpec[:idx-1]
+		}
 	}
-	dt, err := time.ParseInLocation(template, date, time.Local)
-	if err != nil {
-		return dt, err
+
+	var modifiers []func(time.Time) time.Time
+
+	for _, idxs := range results {
+		op := dateSpec[idxs[2]:idxs[3]]
+		d, err := time.ParseDuration(dateSpec[idxs[4]:idxs[5]])
+			if err != nil {
+				return time.Time{}, err
+			}
+		switch op {
+		case "round":
+			modifiers = append(modifiers, func (t time.Time) time.Time { return t.Round(d) })
+		case "truncate":
+			modifiers = append(modifiers, func (t time.Time) time.Time { return t.Truncate(d) })
+		case "add":
+			modifiers = append(modifiers, func (t time.Time) time.Time { return t.Add(d) })
+		}
 	}
-	dt = fillDate(dt, time.Now())
+
+	var dt time.Time
+
+	if dateSubstr == "now" || dateSubstr == "" {
+		dt = time.Now()
+	} else {
+		specs := []Formats{
+			{"15:04", addDate},
+			{time.RFC3339, returnDate},
+		}
+		var err error
+		for _, spec := range specs {
+			dt, err = time.ParseInLocation(spec.template, dateSubstr, time.Local)
+			if err == nil {
+				dt = spec.complete(dt, time.Now())
+				break
+			}
+		}
+		if err != nil {
+			return time.Time{}, err
+		}
+	}
+	for _, mod := range modifiers {
+		dt = mod(dt)
+	}
+	log.Fatalln(dt)
 	return dt, nil
 }
 
-func fillDate(dt time.Time, now time.Time) time.Time {
+func returnDate(dt time.Time, now time.Time) time.Time {
+	return dt
+}
+
+func addDate(dt time.Time, now time.Time) time.Time {
+	return time.Date(now.Year(), now.Month(), now.Day(), dt.Hour(), dt.Minute(), dt.Second(), dt.Nanosecond(), dt.Location())
+}
+
+func addYear(dt time.Time, now time.Time) time.Time {
 	if dt.Year() == 0 {
 		dt = dt.AddDate(now.Year(), 0, 0)
 		if dt.After(now) {
@@ -239,7 +301,7 @@ func (i *Iterator) Print(to time.Time, options Options, format retime.Format) {
 			log.Fatalln("Error reading file:", i.Err)
 		}
 		i.Time, i.Err = format.Extract(i.Line)
-		i.Time = fillDate(i.Time, time.Now())
+		i.Time = addYear(i.Time, time.Now())
 
 		switch {
 		case i.Err != nil && options.multiline:
@@ -274,7 +336,7 @@ func (i *Iterator) Scan(from, to time.Time, ignoreError bool, format retime.Form
 			break
 		}
 		i.Time, i.Err = format.Extract(i.Line)
-		i.Time = fillDate(i.Time, time.Now())
+		i.Time = addYear(i.Time, time.Now())
 		if i.Err != nil && ignoreError {
 			continue
 		}
@@ -326,7 +388,7 @@ func findStartSeekable(f *os.File, options Options, format retime.Format) (*bufi
 			}
 
 			dt, err = format.Extract(line)
-			dt = fillDate(dt, time.Now())
+			dt = addYear(dt, time.Now())
 			if err != nil && ignoreErrors {
 				continue
 			}
