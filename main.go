@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"compress/bzip2"
 	"compress/gzip"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/mdom/dtgrep/retime"
@@ -13,6 +14,7 @@ import (
 	"path"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -73,37 +75,47 @@ var formats = map[string]string{
 
 func parseDate(dateSpec string, template string) (time.Time, error) {
 
-	dateSubstr := dateSpec
+	datePart := dateSpec
+	modPart := ""
 
-	results := regexp.MustCompile(`(add|truncate)\s+(\S+)`).FindAllStringSubmatchIndex(dateSpec, -1)
+	results := regexp.MustCompile(`add|truncate`).FindStringIndex(dateSpec)
 	if results != nil {
-		idx := results[0][0]
+		idx := results[0]
 		if idx == 0 {
-			dateSubstr = ""
+			datePart = ""
+			modPart = dateSpec
 		} else {
-			dateSubstr = dateSpec[:idx-1]
+			datePart = dateSpec[:idx-1]
+			modPart = dateSpec[idx:]
 		}
 	}
 
 	var modifiers []func(time.Time) time.Time
+	fields := strings.Fields(modPart)
 
-	for _, idxs := range results {
-		op := dateSpec[idxs[2]:idxs[3]]
-		d, err := time.ParseDuration(dateSpec[idxs[4]:idxs[5]])
-			if err != nil {
-				return time.Time{}, err
-			}
-		switch op {
+	for i := 0; i < len(fields); i += 2 {
+
+		if i+1 == len(fields) {
+			return time.Time{}, errors.New("Missing argument for " + fields[i])
+		}
+
+		d, err := time.ParseDuration(fields[i+1])
+		if err != nil {
+			return time.Time{}, err
+		}
+		switch fields[i] {
 		case "truncate":
-			modifiers = append(modifiers, func (t time.Time) time.Time { return t.Truncate(d) })
+			modifiers = append(modifiers, func(t time.Time) time.Time { return t.Truncate(d) })
 		case "add":
-			modifiers = append(modifiers, func (t time.Time) time.Time { return t.Add(d) })
+			modifiers = append(modifiers, func(t time.Time) time.Time { return t.Add(d) })
+		default:
+			return time.Time{}, errors.New("Unknown operator " + fields[i])
 		}
 	}
 
 	var dt time.Time
 
-	if dateSubstr == "now" || dateSubstr == "" {
+	if datePart == "now" || datePart == "" {
 		dt = time.Now()
 	} else {
 		specs := []Formats{
@@ -112,7 +124,7 @@ func parseDate(dateSpec string, template string) (time.Time, error) {
 		}
 		var err error
 		for _, spec := range specs {
-			dt, err = time.ParseInLocation(spec.template, dateSubstr, time.Local)
+			dt, err = time.ParseInLocation(spec.template, datePart, time.Local)
 			if err == nil {
 				dt = spec.complete(dt, time.Now())
 				break
