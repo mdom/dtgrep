@@ -73,7 +73,19 @@ var formats = map[string]string{
 	"apache":  "02/Jan/2006:15:04:05 -0700",
 }
 
-func parseDate(dateSpec string, template string) (time.Time, error) {
+type dateFlag struct {
+	date time.Time
+}
+
+func (d *dateFlag) String() string {
+	return d.date.String()
+}
+
+func (d *dateFlag) Get() time.Time {
+	return d.date
+}
+
+func (d *dateFlag) Set(dateSpec string) error {
 
 	datePart := dateSpec
 	modPart := ""
@@ -96,12 +108,12 @@ func parseDate(dateSpec string, template string) (time.Time, error) {
 	for i := 0; i < len(fields); i += 2 {
 
 		if i+1 == len(fields) {
-			return time.Time{}, errors.New("Missing argument for " + fields[i])
+			return errors.New("Missing argument for " + fields[i])
 		}
 
 		d, err := time.ParseDuration(fields[i+1])
 		if err != nil {
-			return time.Time{}, err
+			return err
 		}
 		switch fields[i] {
 		case "truncate":
@@ -109,7 +121,7 @@ func parseDate(dateSpec string, template string) (time.Time, error) {
 		case "add":
 			modifiers = append(modifiers, func(t time.Time) time.Time { return t.Add(d) })
 		default:
-			return time.Time{}, errors.New("Unknown operator " + fields[i])
+			return errors.New("Unknown operator " + fields[i])
 		}
 	}
 
@@ -131,14 +143,14 @@ func parseDate(dateSpec string, template string) (time.Time, error) {
 			}
 		}
 		if err != nil {
-			return time.Time{}, err
+			return err
 		}
 	}
 	for _, mod := range modifiers {
 		dt = mod(dt)
 	}
-	log.Fatalln(dt)
-	return dt, nil
+	d.date = dt
+	return nil
 }
 
 func returnDate(dt time.Time, now time.Time) time.Time {
@@ -164,7 +176,10 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix("")
 
-	var fromArg, toArg, formatName, location string
+	var formatName, location string
+
+	fromFlag := dateFlag{}
+	toFlag := dateFlag{time.Now()}
 
 	var options Options
 
@@ -173,8 +188,9 @@ func main() {
 		defaultFormat = os.Getenv("GO_DATEGREP_FORMAT")
 	}
 
-	flag.StringVar(&fromArg, "from", epoch.Format(time.RFC3339), "Print all lines from `DATESPEC` inclusively.")
-	flag.StringVar(&toArg, "to", "now", "Print all lines until `DATESPEC` exclusively.")
+	flag.Var(&fromFlag, "from", "Print all lines from `DATESPEC` inclusively.")
+	flag.Var(&toFlag, "to", "Print all lines until `DATESPEC` exclusively.")
+
 	flag.StringVar(&formatName, "format", defaultFormat, "Use `Format` to parse file.")
 	flag.BoolVar(&options.skipDateless, "skip-dateless", false, "Ignore all lines without timestamp.")
 	flag.BoolVar(&options.multiline, "multiline", false, "Print all lines between the start and end line even if they are not timestamped.")
@@ -182,6 +198,9 @@ func main() {
 
 	var displayVersion bool
 	flag.BoolVar(&displayVersion, "version", false, "Display version")
+
+	flag.Lookup("to").DefValue = "now"
+	flag.Lookup("from").DefValue = "epoch"
 
 	flag.Parse()
 
@@ -198,14 +217,14 @@ func main() {
 		log.Fatalln("Can't load location:", err)
 	}
 
-	options.from, err = parseDate(fromArg, time.RFC3339)
-	if err != nil {
-		log.Fatalln("Can't parse --from:", err)
+	options.from = fromFlag.Get()
+	options.to = toFlag.Get()
+
+	if options.to.IsZero() {
+		options.to = time.Now()
 	}
-	options.to, err = parseDate(toArg, time.RFC3339)
-	if err != nil {
-		log.Fatalln("Can't parse --to:", err)
-	}
+
+	log.Fatalln("from", options.from, "to", options.to)
 
 	var format retime.Format
 	for name, template := range formats {
