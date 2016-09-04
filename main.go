@@ -75,7 +75,7 @@ func parseDate(dateSpec string, template string) (time.Time, error) {
 
 	dateSubstr := dateSpec
 
-	results := regexp.MustCompile(`(add|round|truncate)\s+(\S+)`).FindAllStringSubmatchIndex(dateSpec, -1)
+	results := regexp.MustCompile(`(add|truncate)\s+(\S+)`).FindAllStringSubmatchIndex(dateSpec, -1)
 	if results != nil {
 		idx := results[0][0]
 		if idx == 0 {
@@ -94,8 +94,6 @@ func parseDate(dateSpec string, template string) (time.Time, error) {
 				return time.Time{}, err
 			}
 		switch op {
-		case "round":
-			modifiers = append(modifiers, func (t time.Time) time.Time { return t.Round(d) })
 		case "truncate":
 			modifiers = append(modifiers, func (t time.Time) time.Time { return t.Truncate(d) })
 		case "add":
