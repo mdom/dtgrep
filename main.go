@@ -22,9 +22,9 @@ var now = time.Now()
 var epoch time.Time
 var loc = time.Local
 
-var Version = ""
-var CommitHash = ""
-var BuildDate = ""
+var Version = "unknown"
+var CommitHash = "unknown"
+var BuildDate = "unknown"
 
 type Options struct {
 	from, to     time.Time
