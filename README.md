@@ -108,7 +108,7 @@ stopping you to just call dtgrep directly.
 
 dtgrep expects the files to be sorted. If the timestamps are not
 ascending, dtgrep might be exiting before the last line in its date
-range is printed.
+range is printed. So, no daylight saving time.
 
 # SEE ALSO
 
