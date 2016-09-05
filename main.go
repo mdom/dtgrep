@@ -224,8 +224,6 @@ func main() {
 		options.to = time.Now()
 	}
 
-	log.Fatalln("from", options.from, "to", options.to)
-
 	var format retime.Format
 	for name, template := range formats {
 		if name == formatName {
