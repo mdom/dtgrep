@@ -112,10 +112,16 @@ range is printed.
 
 # SEE ALSO
 
-# NOTES
+This is by far no new idea. Just on github you can find at least 10
+programs that at least the binary search part of the problem. Search
+for tgrep, timegrep or dategrep.
 
-This is a reimplementation of dategrep in perl. It does not support the
-same switches and does parse the same dates.
+I wrote [dategrep](http://github.com/mdom/dategrep) without knowing
+about these. What is weird, as  I distinctly remember that i searched
+extensively for such a program but I must have choosen very poor terms.
+
+Since then i never lost interest in the problem. This is another try to
+find the right mix of features, easy deployment and faste results.
 
 # COPYRIGHT AND LICENSE
 
