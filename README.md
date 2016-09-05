@@ -56,12 +56,12 @@ stopping you to just call dtgrep directly.
 * --from DATESPEC
 
   Print all lines from RFC3339 inclusively. Defaults to January 1,
-  year 1, 00:00:00 UTC. See [DATESPECS](#DATESPECS) for valid arguments.
+  year 1, 00:00:00 UTC. See [DATESPECS](#datespecs) for valid arguments.
 
 * --to DATESPEC
 
   Print all lines until RFC3339 exclusively. Default to the current
-  time. See [DATESPECS](#DATESPECS) for valid arguments.
+  time. See [DATESPECS](#datespecs) for valid arguments.
 
 * --format FORMAT
 
