@@ -259,6 +259,9 @@ func main() {
 
 	options.from, options.to = dateRange(fromFlag.Get(), toFlag.Get(), duration)
 
+	if options.from.After(options.to) || options.from.Equal(options.to) {
+		log.Fatalln("Start date must be before end date.")
+	}
 
 	var format retime.Format
 	for name, template := range formats {
