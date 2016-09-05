@@ -1,10 +1,10 @@
 # NAME
 
-go-dategrep - print lines matching a date range
+dtgrep - print lines matching a date range
 
 # SYNOPSIS
 
-    go-dategrep --from RFC3339 --to RFC3339 --format TIME_LAYOUT syslog
+    dtgrep --from RFC3339 --to RFC3339 --format TIME_LAYOUT syslog
 
 # DESCRIPTION
 
@@ -27,31 +27,31 @@ The lines are merged and will not be printed in argument order.
 
 But just let me show you a few examples.
 
-The only parameter go-dategrep really needs is _format_ to tell it how to
-reckognize a timestamp. In this case go-dategrep matches all lines from epoch to
-the time go-dategrep started.
+The only parameter dtgrep really needs is _format_ to tell it how to
+reckognize a timestamp. In this case dtgrep matches all lines from epoch to
+the time dtgrep started.
 
-    go-dategrep --format "Jan _2 15:04:05" syslog
+    dtgrep --format "Jan _2 15:04:05" syslog
 
 There are also some already predefined formats you can use:
 
-    go-dategrep --format apache access.log
+    dtgrep --format apache access.log
 
 You can specify which timerange to print:
 
-    go-dategrep --from 2006-01-02T12:00:00 --to 2006-01-02T12:15:00 syslog
+    dtgrep --from 2006-01-02T12:00:00 --to 2006-01-02T12:15:00 syslog
 
 If you leave one out it either defaults to epoch or the start of the program.
 
-    go-dategrep  --to 2006-01-02T12:15:00 --format rsyslog syslog
+    dtgrep  --to 2006-01-02T12:15:00 --format rsyslog syslog
 
-go-dategrep can also read lines from stdin, but filtering those will be
+dtgrep can also read lines from stdin, but filtering those will be
 slower as you can't just seek in a pipe.  It's often more efficient to
 just redirect the lines from the pipe to a file first. But nothing is
-stopping you to just call go-dategrep directly.
+stopping you to just call dtgrep directly.
 
-    zcat syslog.gz | go-dategrep --to 2006-01-02T12:15:00
-    go-dategrep --to 2006-01-02T12:15:00 syslog.gz
+    zcat syslog.gz | dtgrep --to 2006-01-02T12:15:00
+    dtgrep --to 2006-01-02T12:15:00 syslog.gz
 
 # OPTIONS
 
@@ -70,7 +70,7 @@ stopping you to just call go-dategrep directly.
 
   FORMAT can either a named format or any layout supported by the [time package](https://golang.org/pkg/time/#Parse).
 
-  Additionally, go-dategrep supports named formats:
+  Additionally, dtgrep supports named formats:
 
   * rsyslog "Jan \_2 15:04:05"
   * apache "02/Jan/2006:15:04:05 -0700"
@@ -108,8 +108,8 @@ stopping you to just call go-dategrep directly.
 
 # LIMITATION
 
-go-dategrep expects the files to be sorted. If the timestamps are not
-ascending, go-dategrep might be exiting before the last line in its date
+dtgrep expects the files to be sorted. If the timestamps are not
+ascending, dtgrep might be exiting before the last line in its date
 range is printed.
 
 # SEE ALSO
