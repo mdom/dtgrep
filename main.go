@@ -171,6 +171,43 @@ func addYear(dt time.Time, now time.Time) time.Time {
 	return dt
 }
 
+func dateRange (from, to time.Time, duration time.Duration) (time.Time, time.Time) {
+
+	// --duration, --from and --to specified
+	if duration != 0 && !to.IsZero() && !from.IsZero() {
+		log.Fatalln("--duration can only be used with either --from or --to.")
+	}
+
+	// only --duration specified
+	if duration != 0 && to.IsZero() && from.IsZero() {
+		now := time.Now()
+		log.Println("duration", duration)
+		switch {
+		case duration.Hours() >= 1:
+			to = now.Truncate(time.Duration(1) * time.Hour)
+		case duration.Minutes() >= 1:
+			to = now.Truncate(time.Duration(1) * time.Minute)
+		default:
+			to = now.Truncate(time.Duration(1) * time.Second)
+		}
+		from = to.Add(-duration)
+	}
+
+	if duration != 0 && !to.IsZero() && from.IsZero() {
+		from = to.Add(-duration)
+	}
+
+	if duration != 0 && to.IsZero() && !from.IsZero() {
+		to = from.Add(duration)
+	}
+
+	if to.IsZero() {
+		to = time.Now()
+	}
+
+	return from, to
+}
+
 func main() {
 
 	log.SetFlags(0)
@@ -178,8 +215,9 @@ func main() {
 
 	var formatName, location string
 
-	fromFlag := dateFlag{}
-	toFlag := dateFlag{time.Now()}
+	var fromFlag, toFlag dateFlag
+
+	var duration time.Duration
 
 	var options Options
 
@@ -191,10 +229,12 @@ func main() {
 	flag.Var(&fromFlag, "from", "Print all lines from `DATESPEC` inclusively.")
 	flag.Var(&toFlag, "to", "Print all lines until `DATESPEC` exclusively.")
 
-	flag.StringVar(&formatName, "format", defaultFormat, "Use `Format` to parse file.")
+	flag.StringVar(&formatName, "format", defaultFormat, "Use `FORMAT` to parse file.")
 	flag.BoolVar(&options.skipDateless, "skip-dateless", false, "Ignore all lines without timestamp.")
 	flag.BoolVar(&options.multiline, "multiline", false, "Print all lines between the start and end line even if they are not timestamped.")
 	flag.StringVar(&location, "location", time.Local.String(), "Use location in the absence of any timezone information.")
+
+	flag.DurationVar(&duration, "duration", 0, "Print all lines in `DURATION` from --from or --to.")
 
 	var displayVersion bool
 	flag.BoolVar(&displayVersion, "version", false, "Display version")
@@ -217,12 +257,8 @@ func main() {
 		log.Fatalln("Can't load location:", err)
 	}
 
-	options.from = fromFlag.Get()
-	options.to = toFlag.Get()
+	options.from, options.to = dateRange(fromFlag.Get(), toFlag.Get(), duration)
 
-	if options.to.IsZero() {
-		options.to = time.Now()
-	}
 
 	var format retime.Format
 	for name, template := range formats {
