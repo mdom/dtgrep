@@ -53,14 +53,15 @@ stopping you to just call dtgrep directly.
 
 # OPTIONS
 
-* --from RFC3339
+* --from DATESPEC
 
   Print all lines from RFC3339 inclusively. Defaults to January 1,
-  year 1, 00:00:00 UTC.
+  year 1, 00:00:00 UTC. See [DATESPECS](#DATESPECS) for valid arguments.
 
-* --to RFC3339
+* --to DATESPEC
 
-  Print all lines until RFC3339 exclusively. Default to the current time.
+  Print all lines until RFC3339 exclusively. Default to the current
+  time. See [DATESPECS](#DATESPECS) for valid arguments.
 
 * --format FORMAT
 
@@ -97,6 +98,31 @@ stopping you to just call dtgrep directly.
 * --help
 
   Shows a short help message
+
+# DATESPECS
+
+A datespec consists of a datetime and any numbers of modifiers. A
+datetime can be an imcomplete date, in this case the missing values
+will be filled with the current date. Without a timezone designator,
+the local timezone will be used. The following formats are supported
+
+* 15:04
+* 2006-01-02T15:04:05Z07:00
+* now
+
+A modifier can either be a _truncate_ or _add_ statement. Both expect a duration as argument.
+
+* Truncate will round the date down to the next multiple of its duration
+* Add adds the duration to the current date.
+
+Duration can be a any value parsable by the [ParseDuration function](https://golang.org/pkg/time/#ParseDuration).
+
+Some examples
+
+* "15:06 truncate 5m add -5m" results in 15:00 today
+* "now truncate 24h add -24h" is the beginning of yesterday
+* "00:00 add -24h" is also the start of the last day.
+* "now"
 
 # ENVIRONMENT
 
