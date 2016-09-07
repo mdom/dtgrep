@@ -106,7 +106,11 @@ datetime can be an imcomplete date, in this case the missing values
 will be filled with the current date. Without a timezone designator,
 the local timezone will be used. The following formats are supported
 
+* 04
 * 15:04
+* 15:04:05
+* 2006-01-02 15:04:05
+* 2006-01-02 15:04:05Z07:00
 * 2006-01-02T15:04:05Z07:00
 * now
 

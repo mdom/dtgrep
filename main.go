@@ -131,7 +131,11 @@ func (d *dateFlag) Set(dateSpec string) error {
 		dt = time.Now()
 	} else {
 		specs := []Formats{
+			{"04", addDateHour},
 			{"15:04", addDate},
+			{"15:04:05", addDate},
+			{"2006-01-02 15:04:05", returnDate},
+			{"2006-01-02 15:04:05Z07:00", returnDate},
 			{time.RFC3339, returnDate},
 		}
 		var err error
@@ -159,6 +163,10 @@ func returnDate(dt time.Time, now time.Time) time.Time {
 
 func addDate(dt time.Time, now time.Time) time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day(), dt.Hour(), dt.Minute(), dt.Second(), dt.Nanosecond(), dt.Location())
+}
+
+func addDateHour(dt time.Time, now time.Time) time.Time {
+	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), dt.Minute(), dt.Second(), dt.Nanosecond(), dt.Location())
 }
 
 func addYear(dt time.Time, now time.Time) time.Time {
