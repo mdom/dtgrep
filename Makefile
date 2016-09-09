@@ -12,3 +12,7 @@ release: build
 coverage:
 	go test -coverprofile=cover.out
 	go tool cover -html=cover.out
+
+check:
+	go vet ./...
+	gofmt -d *.go retime/*.go | tee .fmt.diff && ! [ -s .fmt.diff ]
