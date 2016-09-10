@@ -189,7 +189,6 @@ func dateRange (from, to time.Time, duration time.Duration) (time.Time, time.Tim
 
 	// only --duration specified
 	if duration != 0 && to.IsZero() && from.IsZero() {
-		log.Println("duration", duration)
 		switch {
 		case duration.Hours() >= 1:
 			to = now.Truncate(time.Duration(1) * time.Hour)
