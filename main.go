@@ -128,7 +128,7 @@ func (d *dateFlag) Set(dateSpec string) error {
 	var dt time.Time
 
 	if datePart == "now" || datePart == "" {
-		dt = time.Now()
+		dt = now
 	} else {
 		specs := []Formats{
 			{"04", addDateHour},
@@ -142,7 +142,7 @@ func (d *dateFlag) Set(dateSpec string) error {
 		for _, spec := range specs {
 			dt, err = time.ParseInLocation(spec.template, datePart, time.Local)
 			if err == nil {
-				dt = spec.complete(dt, time.Now())
+				dt = spec.complete(dt, now)
 				break
 			}
 		}
@@ -188,7 +188,6 @@ func dateRange (from, to time.Time, duration time.Duration) (time.Time, time.Tim
 
 	// only --duration specified
 	if duration != 0 && to.IsZero() && from.IsZero() {
-		now := time.Now()
 		log.Println("duration", duration)
 		switch {
 		case duration.Hours() >= 1:
@@ -210,7 +209,7 @@ func dateRange (from, to time.Time, duration time.Duration) (time.Time, time.Tim
 	}
 
 	if to.IsZero() {
-		to = time.Now()
+		to = now
 	}
 
 	return from, to
@@ -375,7 +374,7 @@ func (i *Iterator) Print(to time.Time, options Options, format retime.Format) {
 			log.Fatalln("Error reading file:", i.Err)
 		}
 		i.Time, i.Err = format.Extract(i.Line)
-		i.Time = addYear(i.Time, time.Now())
+		i.Time = addYear(i.Time, now)
 
 		switch {
 		case i.Err != nil && options.multiline:
@@ -410,7 +409,7 @@ func (i *Iterator) Scan(from, to time.Time, ignoreError bool, format retime.Form
 			break
 		}
 		i.Time, i.Err = format.Extract(i.Line)
-		i.Time = addYear(i.Time, time.Now())
+		i.Time = addYear(i.Time, now)
 		if i.Err != nil && ignoreError {
 			continue
 		}
@@ -462,7 +461,7 @@ func findStartSeekable(f *os.File, options Options, format retime.Format) (*bufi
 			}
 
 			dt, err = format.Extract(line)
-			dt = addYear(dt, time.Now())
+			dt = addYear(dt, now)
 			if err != nil && ignoreErrors {
 				continue
 			}
