@@ -134,6 +134,7 @@ func (d *dateFlag) Set(dateSpec string) error {
 			{"04", addDateHour},
 			{"15:04", addDate},
 			{"15:04:05", addDate},
+			{"2006-01-02 15:04", returnDate},
 			{"2006-01-02 15:04:05", returnDate},
 			{"2006-01-02 15:04:05Z07:00", returnDate},
 			{time.RFC3339, returnDate},
