@@ -9,13 +9,13 @@ import (
 type Format struct {
 	regexp *regexp.Regexp
 	layout string
-	loc  *time.Location
+	loc    *time.Location
 }
 
 func New(layout string, loc *time.Location) (Format, error) {
 	format := Format{
 		layout: layout,
-		loc: loc,
+		loc:    loc,
 	}
 	regexp, err := compileToRegexp(layout)
 	if err != nil {

@@ -180,7 +180,7 @@ func addYear(dt time.Time, now time.Time) time.Time {
 	return dt
 }
 
-func dateRange (from, to time.Time, duration time.Duration) (time.Time, time.Time) {
+func dateRange(from, to time.Time, duration time.Duration) (time.Time, time.Time) {
 
 	// --duration, --from and --to specified
 	if duration != 0 && !to.IsZero() && !from.IsZero() {
