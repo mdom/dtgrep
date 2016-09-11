@@ -1,13 +1,19 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/) 
+The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
 ### Added
+
+- Additional formats for --from and --to
+
 ### Fixed
+
+- The time used for "now" is set once and evaluates always to the same time.
+
 ### Changed
 ### Deprecated
 ### Removed
