@@ -4,17 +4,16 @@ import (
 	"bufio"
 	"compress/bzip2"
 	"compress/gzip"
-	"errors"
 	"flag"
 	"fmt"
+	"github.com/mdom/dtgrep/dateflag"
+	"github.com/mdom/dtgrep/fixtime"
 	"github.com/mdom/dtgrep/retime"
 	"io"
 	"log"
 	"os"
 	"path"
-	"regexp"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -39,11 +38,6 @@ type Iterator struct {
 	Line string
 	Time time.Time
 	Err  error
-}
-
-type Formats struct {
-	template string
-	complete func(date time.Time, now time.Time) time.Time
 }
 
 type Iterators []*Iterator
@@ -71,113 +65,6 @@ var formats = map[string]string{
 	"rsyslog": "Jan _2 15:04:05",
 	"rfc3339": time.RFC3339,
 	"apache":  "02/Jan/2006:15:04:05 -0700",
-}
-
-type dateFlag struct {
-	date time.Time
-}
-
-func (d *dateFlag) String() string {
-	return d.date.String()
-}
-
-func (d *dateFlag) Get() time.Time {
-	return d.date
-}
-
-func (d *dateFlag) Set(dateSpec string) error {
-
-	datePart := dateSpec
-	modPart := ""
-
-	results := regexp.MustCompile(`add|truncate`).FindStringIndex(dateSpec)
-	if results != nil {
-		idx := results[0]
-		if idx == 0 {
-			datePart = ""
-			modPart = dateSpec
-		} else {
-			datePart = dateSpec[:idx-1]
-			modPart = dateSpec[idx:]
-		}
-	}
-
-	var modifiers []func(time.Time) time.Time
-	fields := strings.Fields(modPart)
-
-	for i := 0; i < len(fields); i += 2 {
-
-		if i+1 == len(fields) {
-			return errors.New("Missing argument for " + fields[i])
-		}
-
-		d, err := time.ParseDuration(fields[i+1])
-		if err != nil {
-			return err
-		}
-		switch fields[i] {
-		case "truncate":
-			modifiers = append(modifiers, func(t time.Time) time.Time { return t.Truncate(d) })
-		case "add":
-			modifiers = append(modifiers, func(t time.Time) time.Time { return t.Add(d) })
-		default:
-			return errors.New("Unknown operator " + fields[i])
-		}
-	}
-
-	var dt time.Time
-
-	if datePart == "now" || datePart == "" {
-		dt = now
-	} else {
-		specs := []Formats{
-			{"04", addDateHour},
-			{"15:04", addDate},
-			{"15:04:05", addDate},
-			{"2006-01-02 15:04", returnDate},
-			{"2006-01-02 15:04:05", returnDate},
-			{"2006-01-02 15:04:05Z07:00", returnDate},
-			{time.RFC3339, returnDate},
-		}
-		var err error
-		for _, spec := range specs {
-			dt, err = time.ParseInLocation(spec.template, datePart, time.Local)
-			if err == nil {
-				dt = spec.complete(dt, now)
-				break
-			}
-		}
-		if err != nil {
-			return err
-		}
-	}
-	for _, mod := range modifiers {
-		dt = mod(dt)
-	}
-	d.date = dt
-	return nil
-}
-
-func returnDate(dt time.Time, now time.Time) time.Time {
-	return dt
-}
-
-func addDate(dt time.Time, now time.Time) time.Time {
-	return time.Date(now.Year(), now.Month(), now.Day(), dt.Hour(), dt.Minute(), dt.Second(), dt.Nanosecond(), dt.Location())
-}
-
-func addDateHour(dt time.Time, now time.Time) time.Time {
-	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), dt.Minute(), dt.Second(), dt.Nanosecond(), dt.Location())
-}
-
-func addYear(dt time.Time, now time.Time) time.Time {
-	if dt.Year() == 0 {
-		dt = dt.AddDate(now.Year(), 0, 0)
-		if dt.After(now) {
-			dt = dt.AddDate(-1, 0, 0)
-		}
-	}
-	return dt
 }
 
 func dateRange(from, to time.Time, duration time.Duration) (time.Time, time.Time) {
@@ -222,7 +109,8 @@ func main() {
 
 	var formatName, location string
 
-	var fromFlag, toFlag dateFlag
+	toFlag := dateflag.DateFlag{Now: now}
+	fromFlag := dateflag.DateFlag{Now: now}
 
 	var duration time.Duration
 
@@ -374,7 +262,7 @@ func (i *Iterator) Print(to time.Time, options Options, format retime.Format) {
 			log.Fatalln("Error reading file:", i.Err)
 		}
 		i.Time, i.Err = format.Extract(i.Line)
-		i.Time = addYear(i.Time, now)
+		i.Time = fixtime.AddYear(i.Time, now)
 
 		switch {
 		case i.Err != nil && options.multiline:
@@ -409,7 +297,7 @@ func (i *Iterator) Scan(from, to time.Time, ignoreError bool, format retime.Form
 			break
 		}
 		i.Time, i.Err = format.Extract(i.Line)
-		i.Time = addYear(i.Time, now)
+		i.Time = fixtime.AddYear(i.Time, now)
 		if i.Err != nil && ignoreError {
 			continue
 		}
@@ -461,7 +349,7 @@ func findStartSeekable(f *os.File, options Options, format retime.Format) (*bufi
 			}
 
 			dt, err = format.Extract(line)
-			dt = addYear(dt, now)
+			dt = fixtime.AddYear(dt, now)
 			if err != nil && ignoreErrors {
 				continue
 			}
