@@ -22,3 +22,5 @@ check:
 	go vet ./...
 	@echo gofmt -s -l .
 	test -z "$$(gofmt -s -l . | tee /dev/stderr)"
+
+.PHONY: check cover release build
