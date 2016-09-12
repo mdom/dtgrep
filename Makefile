@@ -15,4 +15,5 @@ coverage:
 
 check:
 	go vet ./...
-	gofmt -d *.go retime/*.go | tee .fmt.diff && ! [ -s .fmt.diff ]
+	@echo gofmt -s -l .
+	test -z "$$(gofmt -s -l . | tee /dev/stderr)"
