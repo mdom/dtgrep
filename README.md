@@ -152,7 +152,7 @@ about these. What is weird, as  I distinctly remember that i searched
 extensively for such a program but I must have choosen very poor terms.
 
 Since then i never lost interest in the problem. This is another try to
-find the right mix of features, easy deployment and faste results.
+find the right mix of features, easy deployment and fast results.
 
 # COPYRIGHT AND LICENSE
 
